@@ -1,4 +1,4 @@
-######################################################################################################################
+﻿######################################################################################################################
 #TROPHIC POSITION ESTIMATION
 ######################################################################################################################
 
@@ -36,12 +36,11 @@ Fulldata <- read.csv("Data_tRophicPosition.csv", header=TRUE)
 TEFs <- TDF(author = "McCutchan", element = "both", type = "all")
 
 #To start with this first example, we will focus on only one species, the pycnogonid Decolopoda australis. To do so,
-#we will split the data object according to species.
-Split <- split(Fulldata, Fulldata$Species)
-
-#Now, we will format the data about Decolopoda so that they can be used properly by the package's functions. To do so,
-#we have to map relevant data to the corresponding fields.
-Decolopoda <- loadIsotopeData(Split$Decolopoda, 
+#we will have to select our species in the dataset, and format the data about Decolopoda so that they can be used 
+#properly by the package's functions. This is done by mapping our data to relevant corresponding fields.
+Decolopoda <- loadIsotopeData(Fulldata,
+                              group = "Decolopoda",
+                              groupsColumn = "Species",
                               consumer = "Decolopoda", 
                               consumersColumn = "Item",
                               b1 = "Pelagic_BL", 
@@ -55,7 +54,7 @@ Decolopoda <- loadIsotopeData(Split$Decolopoda,
 plot(Decolopoda, b1 = "Pelagic baseline", b2 = "Sympagic baseline")
 
 #First, we can use tRophicPosition to calculate the trophic level of Decolopoda, using a formula partly based on the
-#classic paper by Post(2002). Pay attention to the "lambda" parameter. Here, it is set to 1 because we will estimate
+#classic paper by Post (2002). Pay attention to the "lambda" parameter. Here, it is set to 1 because we will estimate
 #our baselines using isotopic ratios of primary producers directly. If we were using primary consumers instead, lambda
 #would be set to 2.
 Param.TP.Decolopoda <- parametricTP(Decolopoda, lambda=1, print=TRUE)
@@ -81,8 +80,9 @@ posterior.decolopoda.combined <- coda::mcmc(do.call(rbind, posterior.decolopoda)
 getPosteriorMode(posterior.decolopoda.combined)
 
 #Let's plot our model's results using a boxplot of credibility intervals, like in the SIBER package.
-plot.decolopoda <- as.data.frame(posterior.decolopoda.combined)
-plotTP(plot.decolopoda, xlab = NULL, xticklabels="Decolopoda", ylims=c(2.2, 3.2),mgp = c(3, 0.7, 0))
+plotTP(as.data.frame(posterior.decolopoda.combined), 
+       xlab = NULL, xticklabels="Decolopoda", 
+       ylims=c(2.2, 3.2),mgp = c(3, 0.7, 0))
 
 #Finally, we can add the calculated value of trophic position to this plot, just to check whether the two methods
 #yield similar results.
@@ -90,12 +90,13 @@ points(Param.TP.Decolopoda[[4]], col = "red", pch = 16)
 
 #Now, let's move to a more complex example, with five different species.
 
+
 ######################################################################################################################
 #PART 2 - WORKING ON MULTIPLE SPECIES
 ######################################################################################################################
 
-#We will use the same data object as previously. Here, we will use tRophic position to extract relevant data for each
-#of our five species.
+#We will use the same data object as previously. However, this time we will not select a consumer but extract data for
+#all 5 species.
 Allspecies <- extractIsotopeData(Fulldata,
                                  b1 = "Pelagic_BL", 
                                  b2 = "Sympagic_BL",
@@ -108,7 +109,7 @@ Allspecies <- extractIsotopeData(Fulldata,
                                  d15N = "d15N")
                                  
 #We can now look at data summaries, and plot the data for each species. We could do that in 5 times. 
-#Alternatively, we can use a recursive function.
+#Alternatively, we can use a recursive function ("loop").
 for (Species in Allspecies) {
   print(summary(Species))
   plot(Species)
@@ -129,8 +130,7 @@ Parborlasia.TP <- model.allspecies$TPs$Parborlasia.Parborlasia.2bf
 Sterechinus.TP <- model.allspecies$TPs$Sterechinus.Sterechinus.2bf
 
 #The combine them all in a single data frame
-AllSpecies.TP <- cbind(Decolopoda.TP,Flabegraviera.TP,Odontaster.TP,Parborlasia.TP,Sterechinus.TP)
-AllSpecies.TP <- as.data.frame(AllSpecies.TP)
+AllSpecies.TP <- as.data.frame(cbind(Decolopoda.TP,Flabegraviera.TP,Odontaster.TP,Parborlasia.TP,Sterechinus.TP))
 
 #That we can plot.
 plotTP(AllSpecies.TP, xlab = "Species", 
@@ -140,7 +140,9 @@ plotTP(AllSpecies.TP, xlab = "Species",
 
 #If we wish to add the parametric TP estimates as red dots, we need to calculate them for each species.
 #Note that we will not do it for Decolopoda: it was already done in the first part of the script.
-Flabegraviera <- loadIsotopeData(Split$Flabegraviera, 
+Flabegraviera <- loadIsotopeData(Fulldata,
+                              group = "Flabegraviera",
+                              groupsColumn = "Species", 
                               consumer = "Flabegraviera", 
                               consumersColumn = "Item",
                               b1 = "Pelagic_BL", 
@@ -150,17 +152,21 @@ Flabegraviera <- loadIsotopeData(Split$Flabegraviera,
                               deltaC = TEFs$deltaC)
 Param.TP.Flabegraviera <- parametricTP(Flabegraviera, lambda=1, print=TRUE)
 
-Odontaster <- loadIsotopeData(Split$Odontaster, 
-                                 consumer = "Odontaster", 
-                                 consumersColumn = "Item",
-                                 b1 = "Pelagic_BL", 
-                                 b2 = "Sympagic_BL",
-                                 baselineColumn = "Item",
-                                 deltaN = TEFs$deltaN,
-                                 deltaC = TEFs$deltaC)
+Odontaster <- loadIsotopeData(Fulldata,
+                              group = "Odontaster",
+                              groupsColumn = "Species", 
+                              consumer = "Odontaster", 
+                              consumersColumn = "Item",
+                              b1 = "Pelagic_BL", 
+                              b2 = "Sympagic_BL",
+                              baselineColumn = "Item",
+                              deltaN = TEFs$deltaN,
+                              deltaC = TEFs$deltaC)
 Param.TP.Odontaster <- parametricTP(Odontaster, lambda=1, print=TRUE)
 
-Parborlasia <- loadIsotopeData(Split$Parborlasia, 
+Parborlasia <- loadIsotopeData(Fulldata,
+                              group = "Parborlasia",
+                              groupsColumn = "Species", 
                               consumer = "Parborlasia", 
                               consumersColumn = "Item",
                               b1 = "Pelagic_BL", 
@@ -170,7 +176,9 @@ Parborlasia <- loadIsotopeData(Split$Parborlasia,
                               deltaC = TEFs$deltaC)
 Param.TP.Parborlasia <- parametricTP(Parborlasia, lambda=1, print=TRUE)
 
-Sterechinus <- loadIsotopeData(Split$Sterechinus, 
+Sterechinus <- loadIsotopeData(Fulldata,
+                              group = "Sterechinus",
+                              groupsColumn = "Species",  
                               consumer = "Sterechinus", 
                               consumersColumn = "Item",
                               b1 = "Pelagic_BL", 
@@ -194,6 +202,30 @@ points(1:5,Param.TPs, col = "red", pch = 16)
 pairwiseTP <- pairwiseComparisons(model.allspecies$TPs, print = TRUE)
 
 #That will be it for today! Any questions?
+
+
+######################################################################################################################
+#PART 3 - INDEPENDENT WORK
+######################################################################################################################
+
+#Now it's your turn to work! Using what we learned today, try to complete the following tasks / answer the following 
+#questions.
+
+
+#1) Create a full model (two baselines, trophic fractionation for both isotopes) for Odontaster validus, and represent
+#its output as a boxplot.
+
+#2) Create a one baseline model based on the pelagic baseline for Odontaster validus, and represent its output 
+#as a boxplot.
+
+#3) Create another one baseline model for Odontaster validus, but based on sympagic algae. Represent its output 
+#as a boxplot.
+#Tip: you can interchange baselines 1 and 2 in the loadIsotopeData() function
+
+#4) Plot the output of the three 3 models on a single graph.
+
+#5) Interpret the result. What can you tell from this graph?
+
 
 ######################################################################################################################
 #END OF SCRIPT

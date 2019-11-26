@@ -54,11 +54,10 @@ plotCommunityHulls(siber.full, plot.args = list(col = "black", lty = 2))
 #Those graphs are good to take a look at your data. It's probably not your best option to produce nice figures.
 #To do that, we could use R's base functions.
 
-#First, let's calculate the means for each species in each community. To do that, we have to split our data frame in
-#two, one for each community.
-SplitComm <- split(fulldata, fulldata$community)
-Comm1 <- SplitComm$`1`
-Comm2 <- SplitComm$`2`
+#First, let's calculate the means for each species in each community. To do that, we have to produce two subsets of our
+#our data frame, one for each community.
+Comm1 <- fulldata[fulldata$community==1,]
+Comm2 <- fulldata[fulldata$community==2,]
 
 #Now we can calculate the meansby group for each isotopic ratio and in each community.
 means.x.comm1 <- aggregate(Comm1$iso1,list(Comm1$group),mean)$x
@@ -181,15 +180,14 @@ Prob.diff.SDNND <- sum(layman.full.bayes[[1]][,"SDNND"]>layman.full.bayes[[2]][,
 #For this part, and to keep it simple, we will only work with two species: the sea stars Diplasterias brucei and
 #Odontaster validus. To do so, we will take only a subset of the full original data.
 #First, let's split it by community
-SplitComm <- split(fulldata, fulldata$community)
-Comm1 <- SplitComm$`1`
-Comm2 <- SplitComm$`2`
+Comm1 <- fulldata[fulldata$community==1,]
+Comm2 <- fulldata[fulldata$community==2,]
 
 #Then, let's split those by groups.
 SplitGroup1 <- split(Comm1, Comm1$group)
 SplitGroup2 <- split(Comm2, Comm2$group)
 
-#Let's extract the values for S. neumayeri (group 20) and O. validus (group 14).
+#Let's extract the values for D. brucei (group 5) and O. validus (group 14).
 DipBru1 <- SplitGroup1$`5`
 DipBru2 <- SplitGroup2$`5`
 OdoVal1 <- SplitGroup1$`14`
@@ -341,6 +339,43 @@ bayes.overlap2 <- bayesianOverlap("2.5", "2.14", ellipses.post.dipodo, p.interva
 Prob.diff.overlap <- sum(bayes.overlap1[,3]>bayes.overlap2[,3])/ NROW(bayes.overlap1[,3])
 
 #That will be it for today! Any questions?
+
+######################################################################################################################
+#PART 3 - INDEPENDENT WORK
+######################################################################################################################
+
+#Now it's your turn to work! Using what we learned today, try to complete the following tasks / answer the following 
+#questions.
+
+
+#Task 1 - Layman metrics
+
+#1.1) For both communities, build and plot convex hulls based only on echinoderm taxa (Diplasterias brucei, 
+#Heterocucumis sp., Odontaster validus, Ophiura sp., Staurocucumis sp., Sterechinus neumayeri).
+#Tip: you can combine the "subset" ("[]") and "or" ("|") operators.
+
+#1.2) For both communities, build and plot convex hulls based only on predator, scavenger or omnivore taxa (Charcotia 
+#obesa, Decolopoda australis, Diplasterias brucei, Odontaster validus, Ophiura sp., Parborlasia corrugatus).
+
+#1.3) Calculate and print Layman metrics for the hulls you just built.
+
+#1.4) Interpret and comment the output: what trends can you see? How does that translate to ecological insights? 
+
+
+#Task 2 - Ellipses
+
+#2.1) Build & plot ellipses for predator, scavenger, and omnivore taxa from community 1.
+
+#2.2) Compute frequentist estimates of ellipse parameters for all taxa.
+
+#2.3) Compute frequentist overlap between D. australis and P. corrugatus.
+
+#2.4) Produce Bayesian estimates for ellipse parameters, and represent standard ellipse areas as boxplots.
+
+#2.5) Among Charcotia obesa, Odontaster validus, and Decolopoda australis, which has the biggest SEA?
+
+#2.6) Interpret and comment all these trends: which ecological info can you generate from all that?
+
 
 ######################################################################################################################
 #END OF SCRIPT
