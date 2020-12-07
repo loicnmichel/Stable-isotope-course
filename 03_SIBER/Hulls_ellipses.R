@@ -3,7 +3,7 @@
 ######################################################################################################################
 
 #This script is intended as material for the practical part of the course "Etude des isotopes stables et applications 
-#au milieu marin", taught by Gilles Lepoint & Loïc Michel at University of Liège.
+#au milieu marin", taught by Gilles Lepoint & Loic Michel at University of Liege.
 
 #Most of this script is based on Andrew Jackson's example scripts for his package SIBER. 
 #More info at http://www.tcd.ie/Zoology/research/groups/jackson/
@@ -22,9 +22,13 @@
 #PART 1 - CONVEX HULL METRICS ON COMMUNITIES
 ######################################################################################################################
 
-#Let's install the SIBER package from the CRAN repository, and load it into our session's environment.
+#Let's install the SIBER, dplyr and ggplot packages from the CRAN repository, and load them into our session's environment.
 install.packages("SIBER", dependencies = TRUE)
+install.packages("dplyr", dependencies = TRUE)
+install.packages("ggplot2", dependencies = TRUE)
 library(SIBER)
+library(dplyr)
+library(ggplot2)
 
 #Let's import the data, that are stored in the provided CSV file.
 fulldata <- read.csv("SIBER_full.csv", header=T)
@@ -52,53 +56,31 @@ plotSiberObject(siber.full,
 plotCommunityHulls(siber.full, plot.args = list(col = "black", lty = 2))
 
 #Those graphs are good to take a look at your data. It's probably not your best option to produce nice figures.
-#To do that, we could use R's base functions.
+#To do that, we could use ggplot. There are many online resources that will help you customize just about any
+#aspect of your graph.
 
-#First, let's calculate the means for each species in each community. To do that, we have to produce two subsets of our
-#our data frame, one for each community.
-Comm1 <- fulldata[fulldata$community==1,]
-Comm2 <- fulldata[fulldata$community==2,]
+#First, let's calculate the means for each species in each community. To do that, we will use dplyr.
+comm_means <- fulldata %>% group_by(community, group) %>%
+                           summarise(mC = mean(iso1, na.rm = TRUE),
+                                     mN = mean(iso2, na.rm = TRUE))
 
-#Now we can calculate the meansby group for each isotopic ratio and in each community.
-means.x.comm1 <- aggregate(Comm1$iso1,list(Comm1$group),mean)$x
-means.y.comm1 <- aggregate(Comm1$iso2,list(Comm1$group),mean)$x
-means.x.comm2 <- aggregate(Comm2$iso1,list(Comm2$group),mean)$x
-means.y.comm2 <- aggregate(Comm2$iso2,list(Comm2$group),mean)$x
+#Now we can find the limits of our convex hulls for each community.
+hulls_comm <- comm_means %>%
+              group_by(community) %>%
+              slice(chull(mC,mN))
 
-#Store those means in data frames
-Comm1Means <- cbind(means.x.comm1,means.y.comm1)
-Comm2Means <- cbind(means.x.comm2,means.y.comm2)
-
-#Compute the parameters of the convex hull of community 1
-Hull1 <- chull(Comm1Means)
-Hull1 <- c(Hull1, Hull1[1])
-
-#Compute the parameters of the convex hull of community 2
-Hull2 <- chull(Comm2Means)
-Hull2 <- c(Hull2, Hull2[1])
-
-#Plot the species means for community 1. You can easily customise this plot, see ?plot for details.
-plot(Comm1Means, 
-     type = "p", pch = 16, col = "black", 
-     xlim = c(-26,-12), ylim = c(0,15),
-     xlab = expression({delta}^13*C~'(\u2030)'),
-     ylab = expression({delta}^15*N~'(\u2030)'),
-     main=("Communities convex hulls")
-)
-
-#Plot the species means for community 2.
-points(Comm2Means, 
-       type = "p", pch = 16, col = "red")
-
-#Plot the convex hull for community 1
-lines(Comm1Means[Hull1, ], col="black", lty="solid", lwd=1.5)
-
-#Plot the convex hull for community 2
-lines(Comm2Means[Hull2, ], col="red", lty="solid", lwd=1.5)
-
-#Add a legend
-legend("bottomleft", legend=c("Anse du Lion", "Cap des Elephants"), col=c("black","red"), 
-       pch=16, lty="solid", merge=TRUE, bty="n")
+#And plot all that using ggplot.
+(hull_plot <- ggplot(hull_means, aes (x = mC, y = mN, colour = factor(community))) +
+      geom_point(size = 2) +
+      ylab(expression(paste(delta^{15}, "N (\u2030)"))) +
+      xlab(expression(paste(delta^{13}, "C (\u2030)"))) +
+      scale_colour_manual(name= "Community", labels = c("Cap des Elephants", "Anse du Lion"), 
+                          values = c("#377EB8","#E41A1C")) +
+      scale_fill_manual(name = "Community", labels = c("Cap des Elephants", "Anse du Lion"), 
+                        values = c("#377EB8","#E41A1C")) +
+      aes(fill = factor(community)) +
+      geom_polygon(data = hulls_comm, alpha = 0.3) +
+      theme_bw())
 
 #Now you have a nice-looking graph that you can export to illustrate documents. Time to calculate some metrics.
 
@@ -178,23 +160,9 @@ Prob.diff.SDNND <- sum(layman.full.bayes[[1]][,"SDNND"]>layman.full.bayes[[2]][,
 ######################################################################################################################
 
 #For this part, and to keep it simple, we will only work with two species: the sea stars Diplasterias brucei and
-#Odontaster validus. To do so, we will take only a subset of the full original data.
-#First, let's split it by community
-Comm1 <- fulldata[fulldata$community==1,]
-Comm2 <- fulldata[fulldata$community==2,]
-
-#Then, let's split those by groups.
-SplitGroup1 <- split(Comm1, Comm1$group)
-SplitGroup2 <- split(Comm2, Comm2$group)
-
-#Let's extract the values for D. brucei (group 5) and O. validus (group 14).
-DipBru1 <- SplitGroup1$`5`
-DipBru2 <- SplitGroup2$`5`
-OdoVal1 <- SplitGroup1$`14`
-OdoVal2 <- SplitGroup2$`14`
-
-#Collate those 4 data frames together.
-DipOdo <- rbind(DipBru1,DipBru2,OdoVal1,OdoVal2)
+#Odontaster validus. To do so, we will filter the full original data and extract values for D. brucei (group 5) 
+#and O. validus (group 14).
+DipOdo <- fulldata %>% filter(group == "5" | group == "14")
 
 #Now we can create our SIBER object.
 siber.dipodo <- createSiberObject(DipOdo)
@@ -213,73 +181,39 @@ plotSiberObject(siber.dipodo,
                 ylab = expression({delta}^15*N~'(\u2030)')
                 )
 
-#Like before, SIBER itself is not the best option to customize graphs. Instead, we can do it using base R, then
-#add the ellipses.
+#Like before, SIBER itself is not the best option to customize graphs. Instead, we can do it using ggplot.
 
-#First, let's plot the D. brucei of community 1 as black dots.
-plot(DipBru1$iso1, DipBru1$iso2, type="p", pch = 16, col = "black", 
-     xlim = c(-19,-12), ylim = c(5,12),
-     xlab = expression({delta}^13*C~'(\u2030)'),
-     ylab = expression({delta}^15*N~'(\u2030)'),
-     main=("Population ellipses")
-      )
+#First, let's create a function that will extract ellipse values out of the SIBER object
+pullEllipseStd = function(data, x, y) {
+   return(as.data.frame(addEllipse(data$ML.mu[[x]][ , , y],
+                                   data$ML.cov[[x]][ , , y],
+                                   m = NULL,
+                                   n = 100,
+                                   p.interval = NULL,
+                                   ci.mean = FALSE, do.plot = FALSE)))
+}
 
-#Now, let's add the D. brucei of community 2 as red dots.
-points(DipBru2$iso1, DipBru2$iso2, type="p", pch = 16, col = "red")
+#Now we'll use that function on each of our groups. The x argument is the community number, and the y argument
+#is the group number, taken sequentially
+Ellipse_Dip_Eleph = pullEllipseStd(data=siber.dipodo, x=1, y=1)
+Ellipse_Dip_Lions = pullEllipseStd(data=siber.dipodo, x=2, y=1)
+Ellipse_Odo_Eleph = pullEllipseStd(data=siber.dipodo, x=1, y=2)
+Ellipse_Odo_Lions = pullEllipseStd(data=siber.dipodo, x=2, y=2)
 
-#Now for O. validus of communities 1 and 2, as black and red triangles.
-points(OdoVal1$iso1, OdoVal1$iso2, type="p", pch = 17, col = "black")
-points(OdoVal2$iso1, OdoVal2$iso2, type="p", pch = 17, col = "red")
-
-#And let's add a legend.
-legend("topleft", 
-       legend=c("DB Comm1", "DB Comm 2","OV Comm 1", "OV Comm 2"), 
-       col=c("black","red", "black","red"), 
-       pch=c(16,16,17,17), bty="n")
-
-#Now we can add the ellipse of D. brucei, community 1 as a solid black line.
-ellipse1 <- addEllipse(siber.dipodo$ML.mu[[1]][ , , 1],
-           siber.dipodo$ML.cov[[1]][ , , 1],
-           m = NULL,
-           n = 100,
-           p.interval = NULL,
-           ci.mean = FALSE,
-           col = "black",
-           lty = 1,
-           lwd = 2)
-
-#Add the ellipse of D. brucei, community 2 as a solid red line.
-ellipse2 <- addEllipse(siber.dipodo$ML.mu[[2]][ , , 1],
-           siber.dipodo$ML.cov[[2]][ , , 1],
-           m = NULL,
-           n = 100,
-           p.interval = NULL,
-           ci.mean = FALSE,
-           col = "red",
-           lty = 1,
-           lwd = 2)
-
-#Add the ellipse of O.validus, community 1 as a dashed black line.
-ellipse3 <- addEllipse(siber.dipodo$ML.mu[[1]][ , , 2],
-           siber.dipodo$ML.cov[[1]][ , , 2],
-           m = NULL,
-           n = 100,
-           p.interval = NULL,
-           ci.mean = FALSE,
-           col = "black",
-           lty = 2,
-           lwd = 2)
-
-#Add the ellipse of O.validus, community 2 as a dashed red line.
-ellipse4 <- addEllipse(siber.dipodo$ML.mu[[2]][ , , 2],
-           siber.dipodo$ML.cov[[2]][ , , 2],
-           m = NULL,
-           n = 100,
-           p.interval = NULL,
-           ci.mean = FALSE,
-           col = "red",
-           lty = 2,
-           lwd = 2)
+#Now we can plot that using ggplot. Here as well as different symbols, I used different line types for each
+#taxon (dashed lines for D. brucei, solid lines for O. validus)
+(ggplot(DipOdo, aes(x=iso1, y=iso2))+
+   geom_point(aes(col=factor(community), shape=factor(group)), size=2) +
+   scale_colour_manual(name = "Community", labels = c("Cap des Elephants", "Anse du Lion"), 
+                          values = c("#377EB8","#E41A1C")) +
+   scale_shape_manual(name ="Taxon", labels = c("D. brucei", "O. validus"), values=c(1, 16)) +
+   geom_path(data=Ellipse_Dip_Eleph,aes(x=V1, y=V2),colour="#377EB8",size=1.25, linetype="dashed")+
+   geom_path(data=Ellipse_Dip_Lions,aes(x=V1, y=V2),colour="#E41A1C",size=1.25, linetype="dashed")+
+   geom_path(data=Ellipse_Odo_Eleph,aes(x=V1, y=V2),colour="#377EB8",size=1.25, linetype="solid")+
+   geom_path(data=Ellipse_Odo_Lions,aes(x=V1, y=V2),colour="#E41A1C",size=1.25, linetype="solid")+
+   scale_x_continuous(name=expression({delta}^13*C~('\u2030'))) +
+   scale_y_continuous(name=expression({delta}^15*N~('\u2030'))) +
+   theme_bw())
 
 #Now that we have a pretty graph, let's have a look at the standard ellipse areas.
 group.ML <- groupMetricsML(siber.dipodo)
@@ -352,7 +286,6 @@ Prob.diff.overlap <- sum(bayes.overlap1[,3]>bayes.overlap2[,3])/ NROW(bayes.over
 
 #1.1) For both communities, build and plot convex hulls based only on echinoderm taxa (Diplasterias brucei, 
 #Heterocucumis sp., Odontaster validus, Ophiura sp., Staurocucumis sp., Sterechinus neumayeri).
-#Tip: you can combine the "subset" ("[]") and "or" ("|") operators.
 
 #1.2) For both communities, build and plot convex hulls based only on predator, scavenger or omnivore taxa (Charcotia 
 #obesa, Decolopoda australis, Diplasterias brucei, Odontaster validus, Ophiura sp., Parborlasia corrugatus).
@@ -364,7 +297,8 @@ Prob.diff.overlap <- sum(bayes.overlap1[,3]>bayes.overlap2[,3])/ NROW(bayes.over
 
 #Task 2 - Ellipses
 
-#2.1) Build & plot ellipses for predator, scavenger, and omnivore taxa from community 1.
+#2.1) Build & plot ellipses for predator, scavenger, and omnivore taxa (Charcotia obesa, Decolopoda australis,
+#Diplasterias brucei, Odontaster validus, Ophiura sp., Parborlasia corrugatus) from community 1.
 
 #2.2) Compute frequentist estimates of ellipse parameters for all taxa.
 

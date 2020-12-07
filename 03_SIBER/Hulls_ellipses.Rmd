@@ -1,0 +1,330 @@
+---
+title: "Isotopic niche metrics - Convex hulls and standard ellipses"
+author: "Loic Michel & Gilles Lepoint"
+date:
+output:
+  html_document:
+    theme: default
+  pdf_document: default
+  word_document: default
+---
+<style>
+body {
+text-align: justify}
+</style>
+
+This script is intended as material for the practical part of the course "Etude des isotopes stables et applications au milieu marin", taught by Gilles Lepoint & Loic Michel at University of Liege.
+
+Most of this script is based on Andrew Jackson's example scripts for his package SIBER. More info at http://www.tcd.ie/Zoology/research/groups/jackson/
+If you are looking for more example scripts and guidance to use the package, please visit https://github.com/AndrewLJackson/SIBER and https://cran.r-project.org/web/packages/SIBER/vignettes/.
+
+Prerequisites: Install the current version of R: https://cran.r-project.org/, of RStudio: https://www.rstudio.com/products/rstudio/download/, and of JAGS: http://mcmc-jags.sourceforge.net/.
+Create a Rstudio project associated with your working directory, and make sure your work will be saved automatically.
+
+Now let's get started!
+
+# Part 1 - Convex hull metrics on communities
+
+```{r setup, message=FALSE}
+#Let's install (if necessary) the SIBER, dplyr and ggplot packages from the CRAN repository, and load them into our session's environment.
+#install.packages("SIBER", dependencies = TRUE)
+#install.packages("dplyr", dependencies = TRUE)
+#install.packages("ggplot2", dependencies = TRUE)
+library(SIBER)
+library(dplyr)
+library(ggplot2)
+
+#Let's import the data, that are stored in the provided CSV file.
+fulldata <- read.csv("SIBER_full.csv", header=T)
+
+#Create a key for the community and group codes: it will be useful for quick reference later
+key <- read.csv("Key.csv", header=F)
+```
+<br>
+Now, let'use SIBER to take a look at the data. 
+```{r ellipses, fig.width=8, fig.height=6, fig.align="center"}
+#Create a SIBER object that can be manipulated by the package.
+siber.full <- createSiberObject(fulldata)
+
+#Use SIBER to take a look at the data (colours = groups, symbols = communities)
+par(mar=c(5.1, 5.1, 4.1, 2.1))
+plotSiberObject(siber.full,
+                  ax.pad = 2, 
+                  hulls = F, 
+                  ellipses = F,
+                  group.hulls = F,
+                  bty = "o",
+                  iso.order = c(1,2),
+                  xlab = expression({delta}^13*C~'(\u2030)'),
+                  ylab = expression({delta}^15*N~'(\u2030)')
+                  )
+
+#Add community hulls, computed using the means of every consumer group
+plotCommunityHulls(siber.full, plot.args = list(col = "black", lty = 2))
+```
+<br>
+Those graphs are good to take a look at your data. It's probably not your best option to produce nice figures. To do that, we could use ggplot. There are many online resources that will help you customize just about any aspect of your graph.
+```{r ellipses 2, fig.width=8, fig.height=6, fig.align="center", message=FALSE}
+#First, let's calculate the means for each species in each community. To do that, we will use dplyr.
+comm_means <- fulldata %>% group_by(community, group) %>%
+                           summarise(mC = mean(iso1, na.rm = TRUE),
+                                     mN = mean(iso2, na.rm = TRUE))
+
+#Now we can find the limits of our convex hulls for each community.
+hulls_comm <- comm_means %>%
+              group_by(community) %>%
+              slice(chull(mC,mN))
+
+#And plot all that using ggplot.
+(hull_plot <- ggplot(comm_means, aes (x = mC, y = mN, colour = factor(community))) +
+      geom_point(size = 2) +
+      ylab(expression(paste(delta^{15}, "N (\u2030)"))) +
+      xlab(expression(paste(delta^{13}, "C (\u2030)"))) +
+      scale_colour_manual(name= "Community", labels = c("Cap des Elephants", "Anse du Lion"), 
+                          values = c("#377EB8","#E41A1C")) +
+      scale_fill_manual(name = "Community", labels = c("Cap des Elephants", "Anse du Lion"), 
+                        values = c("#377EB8","#E41A1C")) +
+      aes(fill = factor(community)) +
+      geom_polygon(data = hulls_comm, alpha = 0.3) +
+      theme_bw())
+```
+<br>
+Now you have a nice-looking graph that you can export to illustrate documents. Time to calculate some metrics.
+```{r, results='asis'}
+#Calculate the various Layman metrics on each of the communities.
+Layman.full.calc <- communityMetricsML(siber.full) 
+
+#See those metrics for each community
+print(Layman.full.calc)
+```
+<br>
+As explained during the theoretical course, we can also use a Bayesian model to estimate these values.
+```{r model layman, echo=TRUE, message=FALSE, warning=FALSE, error=FALSE, results='hide', collapse = TRUE}
+#To do that, we first need to set the options for running JAGS. Details are outside the scope of this course.
+parms <- list()
+parms$n.iter <- 2 * 10^4   # Number of model iterations. Here, we will keep it low to limit computation time.
+parms$n.burnin <- 1 * 10^3 # Number of initial discarded values
+parms$n.thin <- 10     # Interval to thin the posterior
+parms$n.chains <- 2        # NUmber of chains to run
+
+# We also need to define the priors. Once again, details are outside the scope of this course.
+priors <- list()
+priors$R <- 1 * diag(2)
+priors$k <- 2
+priors$tau.mu <- 1.0E-3
+
+#Now we will run the model, using the parameters and priors we just specified.
+#This might take a while, and the run length will depend on the computer you use.
+ellipses.post.full <- siberMVN(siber.full, parms, priors)
+
+#Now we can extract the posterior means from our model, and calculate the corresponding distribution of layman 
+#metrics. Once again, this takes a while.
+mu.post <- extractPosteriorMeans(siber.full, ellipses.post.full)
+layman.full.bayes <- bayesianLayman(mu.post)
+```
+<br>
+Let's produce density plots of the metrics to compare them across communities. Given the ranges that can be verydifferent, it's more efficient to do it separately for each metric. Let's try it with TA (total area of the convex hull).On this plot, by default, the dark, median, and light grey are the 50, 75 and 95% credibility intervals, and the black dot is the mode. We can also add the geometrically calculated value to compare our two methods.
+```{r}
+par(mgp=c(3,0.6,0))
+siberDensityPlot(cbind(layman.full.bayes[[1]][,"TA"], layman.full.bayes[[2]][,"TA"]),
+                 xticklabels = c("Anse du Lion", "Cap des Elephants"), 
+                 bty="L", ylim = c(0,60),
+                 las = 1,
+                 ylab = "Total area of the convex hull",
+                 xlab = "Community")
+points(1:2, Layman.full.calc[3,], col = "red", pch = 16)
+```
+<br>
+If we want, we can do that with other metrics. Here is an example with the standard deviation of nearest neighbour distance ("SDNND").
+```{r}
+par(mgp=c(3,0.6,0))
+siberDensityPlot(cbind(layman.full.bayes[[1]][,"SDNND"], layman.full.bayes[[2]][,"SDNND"]),
+                 xticklabels = c("Anse du Lion", "Cap des Elephants"), 
+                 bty="L", ylim = c(0,1),
+                 las = 1,
+                 ylab = "SDNND",
+                 xlab = "Community")
+points(1:2, Layman.full.calc[6,], col = "red", pch = 16)
+```
+<br>
+Finally, we can use our model to compute the probability that Layman metrics' values are different between communities. For TA: 
+```{r}
+Prob.diff.TA <- sum(layman.full.bayes[[1]][,"TA"]>layman.full.bayes[[2]][,"TA"])/ NROW(layman.full.bayes[[2]][,"TA"])
+Prob.diff.TA
+```
+<br>
+Here, this probability is inferior to 95%. It means that there are less than 95% of model runs where the TA ofcommunity 1 is bigger than the one of community 2. If we do an analogy with traditional hypothesis test, it means that TA should be considered similar in the two communities.
+
+Now let's compare another metric, SDNND.
+```{r}
+Prob.diff.SDNND <- sum(layman.full.bayes[[1]][,"SDNND"]>layman.full.bayes[[2]][,"SDNND"])/ 
+                          NROW(layman.full.bayes[[2]][,"SDNND"])
+Prob.diff.SDNND
+```
+<br>
+The probability is around 66%, which is much lower than for TA. Once again, values of this metric can be considered similar in the two communities.
+
+# <br>
+# Part 2 - Standard ellipse metrics on populations
+<br>
+For this part, and to keep it simple, we will only work with two species: the sea stars *Diplasterias brucei* and *Odontaster validus*. 
+```{r ellipses 27, fig.width=8, fig.height=6, fig.align="center"}
+#To do so, we will filter the full original data and extract values for D. brucei (group 5) 
+#and O. validus (group 14).
+DipOdo <- fulldata %>% filter(group == "5" | group == "14")
+
+#Now we can create our SIBER object.
+siber.dipodo <- createSiberObject(DipOdo)
+
+#And quickly visualize it.
+par(mar=c(5.1, 5.1, 4.1, 2.1))
+group.ellipses.args  <- list(n = 100, lty = 1, lwd = 2)
+plotSiberObject(siber.dipodo,
+                ax.pad = 2, 
+                hulls = F, 
+                ellipses = T,
+                group.hulls = F,
+                bty = "o",
+                iso.order = c(1,2),
+                xlab = expression({delta}^13*C~'(\u2030)'),
+                ylab = expression({delta}^15*N~'(\u2030)')
+                )
+```
+<br>
+Like before, SIBER itself is not the best option to customize graphs. Instead, we can do it using ggplot.
+```{r ellipses 12, fig.width=8, fig.height=6, fig.align="center", message=FALSE}
+#First, let's create a function that will extract ellipse values out of the SIBER object
+pullEllipseStd = function(data, x, y) {
+   return(as.data.frame(addEllipse(data$ML.mu[[x]][ , , y],
+                                   data$ML.cov[[x]][ , , y],
+                                   m = NULL,
+                                   n = 100,
+                                   p.interval = NULL,
+                                   ci.mean = FALSE, do.plot = FALSE)))
+}
+
+#Now we'll use that function on each of our groups. The x argument is the community number, and the y argument
+#is the group number, taken sequentially
+Ellipse_Dip_Eleph = pullEllipseStd(data=siber.dipodo, x=1, y=1)
+Ellipse_Dip_Lions = pullEllipseStd(data=siber.dipodo, x=2, y=1)
+Ellipse_Odo_Eleph = pullEllipseStd(data=siber.dipodo, x=1, y=2)
+Ellipse_Odo_Lions = pullEllipseStd(data=siber.dipodo, x=2, y=2)
+
+#Now we can plot that using ggplot. Here as well as different symbols, I used different line types for each
+#taxon (dashed lines for D. brucei, solid lines for O. validus)
+(ggplot(DipOdo, aes(x=iso1, y=iso2))+
+   geom_point(aes(col=factor(community), shape=factor(group)), size=2) +
+   scale_colour_manual(name = "Community", labels = c("Cap des Elephants", "Anse du Lion"), 
+                          values = c("#377EB8","#E41A1C")) +
+   scale_shape_manual(name ="Taxon", labels = c("D. brucei", "O. validus"), values=c(1, 16)) +
+   geom_path(data=Ellipse_Dip_Eleph,aes(x=V1, y=V2),colour="#377EB8",size=1.25, linetype="dashed")+
+   geom_path(data=Ellipse_Dip_Lions,aes(x=V1, y=V2),colour="#E41A1C",size=1.25, linetype="dashed")+
+   geom_path(data=Ellipse_Odo_Eleph,aes(x=V1, y=V2),colour="#377EB8",size=1.25, linetype="solid")+
+   geom_path(data=Ellipse_Odo_Lions,aes(x=V1, y=V2),colour="#E41A1C",size=1.25, linetype="solid")+
+   scale_x_continuous(name=expression({delta}^13*C~('\u2030'))) +
+   scale_y_continuous(name=expression({delta}^15*N~('\u2030'))) +
+   theme_bw())
+```
+<br>
+Now that we have a pretty graph, let's have a look at the standard ellipse areas.
+```{r}
+group.ML <- groupMetricsML(siber.dipodo)
+print(group.ML)
+```
+<br>
+We will now use a Bayesian model to estimate SEA. 
+```{r echo=TRUE, message=FALSE, warning=FALSE, error=FALSE, results='hide', collapse = TRUE}
+#To do that, we need parameters and priors like in the
+#part 1 of the script. We will use the ones we defined earlier and run the model
+ellipses.post.dipodo <- siberMVN(siber.dipodo, parms, priors)
+
+#Now we can sample our posterior distribution.
+SEA.B <- siberEllipses(ellipses.post.dipodo)
+```
+<br>
+Let's plot our model's output, and add red dots for the SEA computed earlier from the covariance matrix.
+```{r ellipses 4, fig.width=8, fig.height=6, fig.align="center", message=FALSE}
+siberDensityPlot(SEA.B, xticklabels = colnames(group.ML), 
+                 xlab = c("Community | Group"),
+                 ylab = expression("Standard Ellipse Area  " ('\u2030' ^2) ),
+                 bty = "L",
+                 las = 1,
+                 main = "Model estimations of SEA",
+                 ylims = c(0,9)
+                  )
+points(1:4, group.ML[3,], col = "red", pch = 16)
+```
+<br>
+Now, let's compare SEA of D. brucei in the two communities.
+```{r}
+Prob.diff.SEA.DB <- sum(SEA.B[,1]>SEA.B[,3])/ NROW(SEA.B[,1])
+Prob.diff.SEA.DB
+```
+<br>
+Same thing but for O. validus. We can adapt this line to compare any pair of groups.
+```{r}
+Prob.diff.SEA.OV <- sum(SEA.B[,2]>SEA.B[,4])/ NROW(SEA.B[,2])
+Prob.diff.SEA.OV
+```
+<br>
+Another interesting thing to do would be to compare the overlaps between ellipses of both species in each community to estimate to which extent they share resources. Let's do that first for community 1:
+```{r}
+sea.overlap.comm1 <- maxLikOverlap("1.5", "1.14", siber.dipodo, p.interval = NULL, n = 100)
+sea.overlap.comm1
+```
+<br>
+We can also estimate this overlap in a relative way (i.e. as a percentage of the total niche area of the two species, combined).
+```{r}
+sea.overlap.comm1.rel <- sea.overlap.comm1[3]/(sea.overlap.comm1[1]+sea.overlap.comm1[2]-sea.overlap.comm1[3])
+sea.overlap.comm1.rel
+```
+<br>
+#Now let's do the same thing for community 2.
+```{r}
+sea.overlap.comm2 <- maxLikOverlap("2.5", "2.14", siber.dipodo, p.interval = NULL, n = 100)
+sea.overlap.comm2
+sea.overlap.comm2.rel <- sea.overlap.comm2[3]/(sea.overlap.comm2[1]+sea.overlap.comm2[2]-sea.overlap.comm2[3])
+sea.overlap.comm2.rel
+```
+<br>
+Finally, we can use our model to generate Bayesian estimations of overlap, and compare the distributions to see how probable it is that niche overlap between the two sea stars is bigger in community 2 than in community 1.
+```{r}
+#To do that, we first compute Bayesian overlaps for community 1.
+bayes.overlap1 <- bayesianOverlap("1.5", "1.14", ellipses.post.dipodo, p.interval= NULL, draws=100, n = 100)
+
+#Then for community 2.
+bayes.overlap2 <- bayesianOverlap("2.5", "2.14", ellipses.post.dipodo, p.interval= NULL, draws=100, n = 100)
+
+#And finally we can compare the two posterior distributions to compute our probability.
+Prob.diff.overlap <- sum(bayes.overlap1[,3]>bayes.overlap2[,3])/ NROW(bayes.overlap1[,3])
+Prob.diff.overlap
+```
+# <br>
+# Part 3 - Independent work
+
+Now it's your turn to work! Using what we learned today, try to complete the following tasks / answer the following questions.
+
+## Task 1 - Layman metrics
+
+1.1) For both communities, build and plot convex hulls based only on echinoderm taxa (*Diplasterias brucei*, *Heterocucumis* sp., *Odontaster validus*, *Ophiura* sp., *Staurocucumis* sp., *Sterechinus neumayeri*).
+
+1.2) For both communities, build and plot convex hulls based only on predator, scavenger or omnivore taxa (*Charcotia obesa*, *Decolopoda australis*, *Diplasterias brucei*, *Odontaster validus*, *Ophiura* sp., *Parborlasia corrugatus*).
+
+1.3) Calculate and print Layman metrics for the hulls you just built.
+
+1.4) Interpret and comment the output: what trends can you see? How does that translate to ecological insights? 
+
+
+## Task 2 - Ellipses
+
+2.1) Build & plot ellipses for predator, scavenger, and omnivore taxa (*Charcotia obesa*, *Decolopoda australis*, *Diplasterias brucei*, *Odontaster validus*, *Ophiura* sp., *Parborlasia corrugatus*) from community 1.
+
+2.2) Compute frequentist estimates of ellipse parameters for all taxa.
+
+2.3) Compute frequentist overlap between *D. australis* and *P. corrugatus*.
+
+2.4) Produce Bayesian estimates for ellipse parameters, and represent standard ellipse areas as boxplots.
+
+2.5) Among *Charcotia obesa*, *Odontaster validus*, and *Decolopoda australis*, which has the biggest SEA?
+
+2.6) Interpret and comment all these trends: which ecological info can you generate from all that?
