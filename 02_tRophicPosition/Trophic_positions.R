@@ -1,9 +1,9 @@
-﻿######################################################################################################################
+######################################################################################################################
 #TROPHIC POSITION ESTIMATION
 ######################################################################################################################
 
 #This script is intended as material for the practical part of the course "Etude des isotopes stables et applications 
-#au milieu marin", taught by Gilles Lepoint & Loïc Michel at University of Liège.
+#au milieu marin", taught by Gilles Lepoint & Loic Michel at University of Liege.
 
 #Most of this script is based on Claudio Quezada-Romegialli's example scripts for his package tRophicPosition. 
 #If you are looking for more example scripts and guidance to use the package, 
@@ -79,7 +79,8 @@ summary(posterior.decolopoda)
 posterior.decolopoda.combined <- coda::mcmc(do.call(rbind, posterior.decolopoda))
 getPosteriorMode(posterior.decolopoda.combined)
 
-#Let's plot our model's results using a boxplot of credibility intervals, like in the SIBER package.
+#Let's plot our model's results using a boxplot of credibility intervals. On this plot, by default, the dark, median, 
+#and light grey are the 50, 75 and 95% credibility intervals, and the black dot is the mode.
 plotTP(as.data.frame(posterior.decolopoda.combined), 
        xlab = NULL, xticklabels="Decolopoda", 
        ylims=c(2.2, 3.2),mgp = c(3, 0.7, 0))

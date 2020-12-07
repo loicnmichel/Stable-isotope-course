@@ -1,9 +1,9 @@
-﻿######################################################################################################################
+######################################################################################################################
 #STABLE ISOTOPE MIXING MODELS
 ######################################################################################################################
 
 #This script is intended as material for the practical part of the course "Etude des isotopes stables et applications 
-#au milieu marin", taught by Gilles Lepoint & Loïc Michel at University of Liège.
+#au milieu marin", taught by Gilles Lepoint & Loic Michel at University of Liege.
 
 #Part 1 of this script is based on Andrew Parnell's example scripts for his package simmr. 
 #If you are looking for more example scripts and guidance to use the package, 
@@ -149,13 +149,18 @@ compare_groups(simmr_output, groups=1:20, source="Sympagic")
 #Sometimes, you want to produce a more synthetic output, and therefore to combine the contributions of sources a
 #a posteriori. Here, for examples, we could combine the sources "Himantothallus" and "Biofilm", as they both represent
 #benthic food items.
-simmr_output_combine = combine_sources(simmr_output,
+simmr_output_combine = combine_sources(simmr_output_short,
                                     to_combine=c('Himantothallus','Biofilm'),
                                     new_source_name='Benthic')
 
 #Once that's done, you can use the new "Benthic" source just like you would do for one of the original sources of the 
 #model:
 compare_groups(simmr_output_combine, groups=1:20, source="Benthic")
+
+plot(simmr_output_combine$input)
+
+plot(simmr_output_combine,type='boxplot',title='group 16',group=16)
+
 
 #If you want to customise the model's output more, the most effective is to extract the info you want to use manually.
 #Here, we do that for the contribution of sympagic algae to Adamussium colbecki diet in both stations.
@@ -302,8 +307,8 @@ plot_data(filename="isospace_plot", plot_save_pdf=FALSE, plot_save_png=FALSE, mi
 #code to use in a text file that will later be passed on to the run_model() function. It is here that you specify the
 #error structure, another MixSIAR key innovation. You can chose between process error (that will account for intra-group
 #variability linked with subsampling biases or specialisation), residual error (that will account for factors such as
-#inter-individual differences in assimilation efficiency and metabolic rates between consumers) or both. #Here (and 
-#actually in most situations), we want to use both to have a model that is as biologically realist as possible.
+#inter-individual differences in assimilation efficiency and metabolic rates between consumers) or both. Here (and 
+#actually in most situations), we want to use both to have a model that is as biologically realistic as possible.
 model_filename <- "MixSIAR_model.txt"
 resid_err <- TRUE
 process_err <- TRUE
@@ -362,7 +367,7 @@ output_JAGS (jags2, mix, source, output_options)
 
 #That leaves you with many graphs and results to analyse and interpretate. If you want to go further with output
 #customisation, you can extract the data of interest from the model object and use them for stats and plots.
-#Here, for example, we look at summary statistics for the first source (they are order alphabetically, so here it will
+#Here, for example, we look at summary statistics for the first source (they are ordered alphabetically, so here it will
 #be biofilm) for the first level of factor 1, i.e. the first taxon, Adamussium colbecki.
 summary(jags2$BUGSoutput$sims.list$p.fac1[,1,1])
 
