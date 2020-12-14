@@ -95,7 +95,7 @@ Now you have a nice-looking graph that you can export to illustrate documents. T
 Layman.full.calc <- communityMetricsML(siber.full) 
 
 #See those metrics for each community
-print(Layman.full.calc)
+print(round(Layman.full.calc, 2))
 ```
 <br>
 As explained during the theoretical course, we can also use a Bayesian model to estimate these values.
