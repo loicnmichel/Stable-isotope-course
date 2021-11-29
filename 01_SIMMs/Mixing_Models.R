@@ -229,8 +229,8 @@ ggplot(Adacol1output, aes(y = Adacol1data, x = Adacol1names, colour = Adacol1nam
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_y_continuous(name="Contribution to diet", limits=c(0,1)) +
   scale_x_discrete(name="Source") +
-  guides(fill=FALSE) +
-  guides(color=FALSE)
+  guides(fill="none") +
+  guides(color="none")
 
 #In this other example, we will use the contributions of sympagic algae to Adamussium colbecki's diet in both sites,
 #extracted earlier. First, we organise them in a data frame.
@@ -247,8 +247,8 @@ ggplot(AdaCol_Sympagic, aes(y = Proportion, x = Site, colour = Site, fill = Site
   ggtitle(expression(italic("Adamussium colbecki")~"- Sympagic algae")) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_y_continuous(name="Contribution to diet", limits=c(0,1)) +
-  guides(fill=FALSE) +
-  guides(color=FALSE)
+  guides(fill="none") +
+  guides(color="none")
 
 #Or alternatively, as violin plots, which are more comparable to density plots.
 ggplot(AdaCol_Sympagic, aes(y = Proportion, x = Site, colour = Site, fill = Site, width=0.9)) +
@@ -257,8 +257,8 @@ ggplot(AdaCol_Sympagic, aes(y = Proportion, x = Site, colour = Site, fill = Site
   ggtitle(expression(italic("Adamussium colbecki")~"- Sympagic algae")) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_y_continuous(name="Contribution to diet", limits=c(0,1)) +
-  guides(fill=FALSE) +
-  guides(color=FALSE)
+  guides(fill="none") +
+  guides(color="none")
 
 #That's it for part 1. Don't hesitate to experiment different things with your model output to find out which options
 #work best in your case.
@@ -414,8 +414,8 @@ ggplot(post.acol, aes(y = post.acol.data, x = post.acol.names, colour = post.aco
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_y_continuous(name="Contribution to diet", limits=c(0,1)) +
   scale_x_discrete(name="Source") +
-  guides(fill=FALSE) +
-  guides(color=FALSE)
+  guides(fill="none") +
+  guides(color="none")
 
 #Or as violin plots
 ggplot(post.acol, aes(y = post.acol.data, x = post.acol.names, colour = post.acol.names, 
@@ -428,8 +428,8 @@ ggplot(post.acol, aes(y = post.acol.data, x = post.acol.names, colour = post.aco
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_y_continuous(name="Contribution to diet", limits=c(0,1)) +
   scale_x_discrete(name="Source") +
-  guides(fill=FALSE) +
-  guides(color=FALSE)
+  guides(fill="none") +
+  guides(color="none")
 
 #That's it for part 2. Any questions?
 

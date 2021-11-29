@@ -90,7 +90,7 @@ hulls_comm <- comm_means %>%
 ```
 <br>
 Now you have a nice-looking graph that you can export to illustrate documents. Time to calculate some metrics.
-```{r, results='asis'}
+```{r}
 #Calculate the various Layman metrics on each of the communities.
 Layman.full.calc <- communityMetricsML(siber.full) 
 

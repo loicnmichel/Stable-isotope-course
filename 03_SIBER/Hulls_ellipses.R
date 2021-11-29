@@ -70,7 +70,7 @@ hulls_comm <- comm_means %>%
               slice(chull(mC,mN))
 
 #And plot all that using ggplot.
-(hull_plot <- ggplot(hull_means, aes (x = mC, y = mN, colour = factor(community))) +
+(hull_plot <- ggplot(comm_means, aes (x = mC, y = mN, colour = factor(community))) +
       geom_point(size = 2) +
       ylab(expression(paste(delta^{15}, "N (\u2030)"))) +
       xlab(expression(paste(delta^{13}, "C (\u2030)"))) +
