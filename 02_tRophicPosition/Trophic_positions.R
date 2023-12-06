@@ -23,7 +23,8 @@
 ######################################################################################################################
 
 #First, we will install the tRophicPosition package, and load it into our session environment.
-install.packages("tRophicPosition", dependencies = TRUE)
+install.packages("devtools")
+devtools::install_github("clquezada/tRophicPosition", build_vignettes = TRUE)
 library(tRophicPosition)
 
 #Import the data. This file contains isotopic ratios for the consumers and the baseline items that we will use into
