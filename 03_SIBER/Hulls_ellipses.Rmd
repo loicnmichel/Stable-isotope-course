@@ -217,10 +217,10 @@ Ellipse_Odo_Lions = pullEllipseStd(data=siber.dipodo, x=2, y=2)
    scale_colour_manual(name = "Community", labels = c("Cap des Elephants", "Anse du Lion"), 
                           values = c("#377EB8","#E41A1C")) +
    scale_shape_manual(name ="Taxon", labels = c("D. brucei", "O. validus"), values=c(1, 16)) +
-   geom_path(data=Ellipse_Dip_Eleph,aes(x=V1, y=V2),colour="#377EB8",size=1.25, linetype="dashed")+
-   geom_path(data=Ellipse_Dip_Lions,aes(x=V1, y=V2),colour="#E41A1C",size=1.25, linetype="dashed")+
-   geom_path(data=Ellipse_Odo_Eleph,aes(x=V1, y=V2),colour="#377EB8",size=1.25, linetype="solid")+
-   geom_path(data=Ellipse_Odo_Lions,aes(x=V1, y=V2),colour="#E41A1C",size=1.25, linetype="solid")+
+   geom_path(data=Ellipse_Dip_Eleph,aes(x=V1, y=V2),colour="#377EB8",linewidth=1.25, linetype="dashed")+
+   geom_path(data=Ellipse_Dip_Lions,aes(x=V1, y=V2),colour="#E41A1C",linewidth=1.25, linetype="dashed")+
+   geom_path(data=Ellipse_Odo_Eleph,aes(x=V1, y=V2),colour="#377EB8",linewidth=1.25, linetype="solid")+
+   geom_path(data=Ellipse_Odo_Lions,aes(x=V1, y=V2),colour="#E41A1C",linewidth=1.25, linetype="solid")+
    scale_x_continuous(name=expression({delta}^13*C~('\u2030'))) +
    scale_y_continuous(name=expression({delta}^15*N~('\u2030'))) +
    theme_bw())
