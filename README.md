@@ -7,4 +7,4 @@ The second script deals with trophic position estimation. It's mostly based on C
 
 The third script deals with ellipse and convex hull-based isotopic niche metrics. It's mostly based on Andrew Jackson's example scripts for his package SIBER. If you are looking for more example scripts and guidance to use the package, please visit https://github.com/AndrewLJackson/SIBER and https://cran.r-project.org/web/packages/SIBER/vignettes/.
 
-Solutions to the "independent work" questions and tasks are available upon request at loicnmichel[at]gmail[dot]com.
+Solutions to the "independent work" questions and tasks are available upon request at loic.michel[at]uliege[dot]be.
