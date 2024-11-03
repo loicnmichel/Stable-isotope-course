@@ -201,12 +201,12 @@ ggplot(Adacol1output, aes(x = Adacol1data, colour = Adacol1names, fill = Adacol1
   scale_fill_manual(values=c("#00A08A","#FF0000","#F98400","#5BBCD6")) +
   ggtitle(expression(italic("Adamussium colbecki")~"- Cap des Eléphants")) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  theme(legend.background = element_rect(fill=NULL, size=NULL, linetype=NULL)) +
+  theme(legend.background = element_rect(fill=NULL, linewidth=NULL, linetype=NULL)) +
   guides(fill=guide_legend(title="Source"), colour=guide_legend(title="Source"))
 
 #If you prefer, you can scale the density functions so that they all have the same maximum height. This can be useful
 #when they have very different distributions that mask trends in the data.
-ggplot(Adacol1output, aes(x = Adacol1data, y=..scaled.., colour = Adacol1names, fill = Adacol1names)) + 
+ggplot(Adacol1output, aes(x = Adacol1data, y=after_stat(scaled), colour = Adacol1names, fill = Adacol1names)) + 
   geom_density(alpha=0.7) + 
   theme_bw() +
   scale_x_continuous(name="Source contribution to diet", limits= c(0,1)) +
@@ -391,7 +391,7 @@ post.acol.names <- c(rep("Biofilm", length(jags2$BUGSoutput$sims.list$p.fac1[,1,
 post.acol <- data.frame(post.acol.data, post.acol.names)
 
 #You can then represent each source contribution to A. colbecki diet as density plots
-ggplot(post.acol, aes(x = post.acol.data, y=..scaled.., colour = post.acol.names, fill = post.acol.names)) + 
+ggplot(post.acol, aes(x = post.acol.data, y=after_stat(scaled), colour = post.acol.names, fill = post.acol.names)) + 
   geom_density(alpha=0.5) + 
   theme_bw() +
   scale_x_continuous(name="Source contribution to diet", limits= c(0,1)) +
